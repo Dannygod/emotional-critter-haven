@@ -42,7 +42,6 @@ function CommunityPage() {
   const like = useMutation({
     mutationFn: async (postId: string) => {
       await supabase.from("post_likes").insert({ post_id: postId, user_id: user!.id });
-      await supabase.rpc("noop").then(() => null).catch(() => null);
       const { data: p } = await supabase.from("community_posts").select("like_count").eq("id", postId).single();
       await supabase.from("community_posts").update({ like_count: (p?.like_count || 0) + 1 }).eq("id", postId);
     },
