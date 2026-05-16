@@ -59,46 +59,34 @@ export type Database = {
         Row: {
           anonymous_name: string
           caption: string | null
-          comment_count: number
           created_at: string
-          edited_at: string | null
           emotion_summary: string | null
           id: string
           image_url: string | null
           like_count: number
           monster_id: string
-          status: string
-          updated_at: string
           user_id: string
         }
         Insert: {
           anonymous_name: string
           caption?: string | null
-          comment_count?: number
           created_at?: string
-          edited_at?: string | null
           emotion_summary?: string | null
           id?: string
           image_url?: string | null
           like_count?: number
           monster_id: string
-          status?: string
-          updated_at?: string
           user_id: string
         }
         Update: {
           anonymous_name?: string
           caption?: string | null
-          comment_count?: number
           created_at?: string
-          edited_at?: string | null
           emotion_summary?: string | null
           id?: string
           image_url?: string | null
           like_count?: number
           monster_id?: string
-          status?: string
-          updated_at?: string
           user_id?: string
         }
         Relationships: [
