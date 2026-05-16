@@ -41,9 +41,10 @@ function CommunityPage() {
 
   const like = useMutation({
     mutationFn: async (postId: string) => {
-      await supabase.from("post_likes").insert({ post_id: postId, user_id: user!.id });
-      const { data: p } = await supabase.from("community_posts").select("like_count").eq("id", postId).single();
-      await supabase.from("community_posts").update({ like_count: (p?.like_count || 0) + 1 }).eq("id", postId);
+      // Insert only; DB trigger atomically maintains community_posts.like_count.
+      // Unique constraint (post_id, user_id) prevents double-liking.
+      const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: user!.id });
+      if (error && error.code !== "23505") throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["posts"] }),
   });
