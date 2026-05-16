@@ -55,8 +55,10 @@ export const submitEmotion = createServerFn({ method: "POST" })
     const analysis = tc ? JSON.parse(tc.function.arguments) : null;
     if (!analysis) throw new Error("AI 回應格式錯誤");
 
-    // Get current monster
-    const { data: monster } = await supabase.from("monsters").select("*").eq("id", data.monsterId).single();
+    // Get current monster (scoped to current user — never trust monsterId alone)
+    const { data: monster } = await supabase
+      .from("monsters").select("*")
+      .eq("id", data.monsterId).eq("user_id", userId).single();
     if (!monster) throw new Error("找不到怪獸");
 
     // Update state
