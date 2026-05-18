@@ -365,6 +365,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sprite_parts: {
+        Row: {
+          active: boolean
+          asset_path: string
+          color_tone: string | null
+          created_at: string
+          emotion_tags: string[]
+          id: string
+          key: string
+          layer: string
+          name: string
+          rarity: string
+        }
+        Insert: {
+          active?: boolean
+          asset_path: string
+          color_tone?: string | null
+          created_at?: string
+          emotion_tags?: string[]
+          id?: string
+          key: string
+          layer: string
+          name: string
+          rarity?: string
+        }
+        Update: {
+          active?: boolean
+          asset_path?: string
+          color_tone?: string | null
+          created_at?: string
+          emotion_tags?: string[]
+          id?: string
+          key?: string
+          layer?: string
+          name?: string
+          rarity?: string
+        }
+        Relationships: []
+      }
       user_tasks: {
         Row: {
           assigned_at: string
