@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { Home, ListChecks, BookHeart, Users, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { Home, ListChecks, BookHeart, Users, LibraryBig, Settings as SettingsIcon, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({ component: Layout });
 
@@ -16,6 +16,7 @@ function Layout() {
     { to: "/home", icon: Home, label: "小哞" },
     { to: "/tasks", icon: ListChecks, label: "任務" },
     { to: "/diary", icon: BookHeart, label: "日記" },
+    { to: "/gallery", icon: LibraryBig, label: "圖鑑" },
     { to: "/community", icon: Users, label: "交流" },
     { to: "/settings", icon: SettingsIcon, label: "設定" },
   ];

@@ -102,6 +102,7 @@ function CommunityPage() {
         user_id: user!.id,
         monster_id: monster.id,
         anonymous_name: profile.anonymous_name || "匿名小哞",
+        appearance: monster.appearance,
         image_url: monster.image_url,
         caption: cleanCaption || null,
         emotion_summary:
@@ -339,11 +340,22 @@ function CommunityPage() {
                 )}
               </div>
 
-              <img
-                src={post.image_url || moomoImg}
-                alt="匿名分享的小哞"
-                className="mx-auto mt-3 h-36 w-36 object-contain"
-              />
+              <div className="mt-3 flex justify-center">
+                {post.appearance ? (
+                  <MonsterSprite
+                    appearance={post.appearance as any}
+                    size={144}
+                    animate={false}
+                    className="rounded-2xl"
+                  />
+                ) : (
+                  <img
+                    src={post.image_url || moomoImg}
+                    alt="匿名分享的小哞"
+                    className="h-36 w-36 object-contain"
+                  />
+                )}
+              </div>
 
               {isEditing ? (
                 <div className="mt-3">

@@ -73,7 +73,7 @@ export const submitEmotion = createServerFn({ method: "POST" })
     const { data: candidates } = await supabase
       .from("sprite_parts")
       .select("layer,key,emotion_tags,rarity")
-      .in("layer", ["eyes", "head", "hand", "background"])
+      .in("layer", ["eyes", "mouth", "head", "hand", "background"])
       .overlaps("emotion_tags", [analysis.primaryEmotion]);
 
     const pick = (layer: string) => {
@@ -90,6 +90,7 @@ export const submitEmotion = createServerFn({ method: "POST" })
       ...prevAppearance,
       body: bodyKey,
       eyes: pick("eyes") ?? prevAppearance.eyes ?? "normal",
+      mouth: pick("mouth") ?? prevAppearance.mouth ?? null,
       head: pick("head") ?? prevAppearance.head ?? null,
       hand: pick("hand") ?? prevAppearance.hand ?? null,
       background: pick("background") ?? prevAppearance.background ?? "cream",

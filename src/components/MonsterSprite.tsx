@@ -19,6 +19,7 @@ function spriteUrl(layer: string, key: string | null | undefined): string | null
 export interface MonsterAppearance {
   body?: string | null; // default cream
   eyes?: string | null; // overlay full-face expression; null = body default
+  mouth?: string | null;
   head?: string | null;
   hand?: string | null;
   background?: string | null;
@@ -45,9 +46,10 @@ export function MonsterSprite({ appearance, size = 280, className, animate = tru
       body: spriteUrl("body", a.body || "cream"),
       head: spriteUrl("head", a.head),
       eyes: spriteUrl("eyes", a.eyes),
+      mouth: spriteUrl("mouth", a.mouth),
       hand: spriteUrl("hand", a.hand),
     }),
-    [a.background, a.body, a.head, a.eyes, a.hand],
+    [a.background, a.body, a.head, a.eyes, a.mouth, a.hand],
   );
 
   return (
@@ -90,7 +92,18 @@ export function MonsterSprite({ appearance, size = 280, className, animate = tru
           src={layers.eyes}
           alt=""
           aria-hidden
-          className="absolute left-1/2 top-[34%] w-[58%] -translate-x-1/2 object-contain"
+          className="absolute left-1/2 top-[35%] w-[56%] -translate-x-1/2 object-contain"
+          style={{ imageRendering: "pixelated" }}
+        />
+      )}
+
+      {/* Mouth */}
+      {layers.mouth && (
+        <img
+          src={layers.mouth}
+          alt=""
+          aria-hidden
+          className="absolute left-1/2 top-[52%] w-[34%] -translate-x-1/2 object-contain"
           style={{ imageRendering: "pixelated" }}
         />
       )}
@@ -101,7 +114,7 @@ export function MonsterSprite({ appearance, size = 280, className, animate = tru
           src={layers.head}
           alt=""
           aria-hidden
-          className="absolute left-1/2 top-[-6%] w-[55%] -translate-x-1/2 object-contain"
+          className="absolute left-1/2 top-[-4%] w-[52%] -translate-x-1/2 object-contain"
           style={{ imageRendering: "pixelated" }}
         />
       )}
@@ -112,7 +125,7 @@ export function MonsterSprite({ appearance, size = 280, className, animate = tru
           src={layers.hand}
           alt=""
           aria-hidden
-          className="absolute bottom-[8%] right-[2%] w-[36%] object-contain"
+          className="absolute bottom-[9%] right-[4%] w-[34%] object-contain"
           style={{ imageRendering: "pixelated" }}
         />
       )}

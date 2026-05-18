@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import moomoImg from "@/assets/moomo-default.png";
+import { MonsterSprite } from "@/components/MonsterSprite";
 
 export const Route = createFileRoute("/_authenticated/diary")({ component: DiaryPage });
 
@@ -32,7 +33,7 @@ function DiaryPage() {
       await supabase.from("diaries").insert({
         user_id: user!.id, monster_id: current.id,
         start_date: startedAt.toISOString().slice(0, 10), end_date: new Date().toISOString().slice(0, 10),
-        emotion_summary: { counts, top }, final_image_url: current.image_url, monster_snapshot: current,
+        emotion_summary: { counts, top }, appearance: current.appearance, final_image_url: current.image_url, monster_snapshot: current,
       });
       await supabase.from("monsters").update({ status: "archived", archived_at: new Date().toISOString() }).eq("id", current.id);
     },
@@ -53,7 +54,13 @@ function DiaryPage() {
         {!diaries?.length && <div className="col-span-full rounded-3xl bg-card p-8 text-center text-muted-foreground shadow-pillow">還沒有日記。陪小哞滿一天就能封存囉。</div>}
         {diaries?.map((d: any) => (
           <article key={d.id} className="rounded-3xl bg-card p-5 shadow-pillow">
-            <img src={d.final_image_url || moomoImg} alt="" className="mx-auto h-40 w-40 object-contain" />
+            <div className="flex justify-center">
+              {d.appearance ? (
+                <MonsterSprite appearance={d.appearance as any} size={160} animate={false} className="rounded-2xl" />
+              ) : (
+                <img src={d.final_image_url || moomoImg} alt="" className="h-40 w-40 object-contain" />
+              )}
+            </div>
             <h3 className="mt-3 font-display text-lg text-cocoa">{d.monsters?.name || "小哞"}</h3>
             <p className="text-xs text-muted-foreground">{d.start_date} → {d.end_date}</p>
             <p className="mt-2 text-sm text-cocoa">最常出現：<span className="text-accent">{d.emotion_summary?.top || "neutral"}</span></p>
