@@ -7,7 +7,7 @@ import { Send, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { submitEmotion } from "@/lib/emotion.functions";
-import moomoImg from "@/assets/moomo-default.png";
+import { MonsterSprite } from "@/components/MonsterSprite";
 
 export const Route = createFileRoute("/_authenticated/home")({ component: HomePage });
 
@@ -55,7 +55,7 @@ function HomePage() {
         <div className="flex flex-col items-center text-center">
           <div className="relative">
             <div className="absolute inset-0 -z-10 m-auto h-64 w-64 rounded-full bg-blush/30 blur-3xl" />
-            <img src={monster.image_url || moomoImg} alt={monster.name} width={280} height={280} className="animate-breathe drop-shadow-xl" />
+            <MonsterSprite appearance={monster.appearance as any} size={280} className="drop-shadow-xl" />
           </div>
           <h2 className="mt-4 font-display text-2xl text-cocoa">{monster.name}</h2>
           <p className="text-sm text-muted-foreground">{moodLabel}</p>
