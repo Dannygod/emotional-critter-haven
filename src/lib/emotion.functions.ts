@@ -2,10 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const EMOTION_COLORS: Record<string, string> = {
-  anger: "warm red orange", sadness: "soft blue lavender", anxiety: "pale jittery violet",
-  fatigue: "muted grey beige", frustration: "dusty terracotta", loneliness: "soft periwinkle",
-  embarrassment: "rosy pink", neutral: "cream beige", comfort: "gentle peach gold",
+const EMOTION_BODY: Record<string, string> = {
+  anger: "clay", sadness: "sky", anxiety: "lavender",
+  fatigue: "cream", frustration: "peach", loneliness: "lavender",
+  embarrassment: "blush", neutral: "cream", comfort: "butter",
 };
 
 const ANALYSIS_SCHEMA = {
@@ -68,28 +68,38 @@ export const submitEmotion = createServerFn({ method: "POST" })
     const newPos = isComfort ? Math.min(100, monster.positive_energy + 12) : monster.positive_energy;
     const newMood = Math.max(-100, Math.min(100, isComfort ? monster.mood_score + 10 : monster.mood_score - intensity * 0.1));
 
-    // Build new appearance
-    const appearance = { ...(monster.appearance as any), primaryEmotion: analysis.primaryEmotion, palette: EMOTION_COLORS[analysis.primaryEmotion] || "cream beige" };
+    // === Layer composition: query sprite_parts by emotion tags, random pick per layer ===
+    const tags = [analysis.primaryEmotion, ...(analysis.concreteKeywords || []).map((k: any) => k.text)].filter(Boolean);
+    const { data: candidates } = await supabase
+      .from("sprite_parts")
+      .select("layer,key,emotion_tags,rarity")
+      .in("layer", ["eyes", "head", "hand", "background"])
+      .overlaps("emotion_tags", [analysis.primaryEmotion]);
 
-    // Image gen (best-effort, async-friendly: keep timeout-tolerant)
-    let imageUrl = monster.image_url;
-    try {
-      const imgPrompt = `A cute chubby fluffy plush monster, ${EMOTION_COLORS[analysis.primaryEmotion] || "cream"} body color, expression showing ${analysis.primaryEmotion}, ${analysis.suggestedAccessory?.name ? `wearing a ${analysis.suggestedAccessory.name}` : ""}, soft watercolor kawaii style, on a clean cream background, centered.`;
-      const imgRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-2.5-flash-image", messages: [{ role: "user", content: imgPrompt }], modalities: ["image", "text"] }),
-      });
-      if (imgRes.ok) {
-        const j = await imgRes.json();
-        const url = j.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-        if (url) imageUrl = url;
-      }
-    } catch (e) { console.error("image gen failed", e); }
+    const pick = (layer: string) => {
+      const pool = (candidates || []).filter((c) => c.layer === layer);
+      if (!pool.length) return null;
+      // weight: common 3, rare 1, epic for comfort only already filtered by tag
+      const weighted = pool.flatMap((p) => Array(p.rarity === "common" ? 3 : p.rarity === "rare" ? 1 : 1).fill(p.key));
+      return weighted[Math.floor(Math.random() * weighted.length)] as string;
+    };
+
+    const prevAppearance = (monster.appearance as any) || {};
+    const bodyKey = prevAppearance.body || EMOTION_BODY[analysis.primaryEmotion] || "cream";
+    const appearance = {
+      ...prevAppearance,
+      body: bodyKey,
+      eyes: pick("eyes") ?? prevAppearance.eyes ?? "normal",
+      head: pick("head") ?? prevAppearance.head ?? null,
+      hand: pick("hand") ?? prevAppearance.hand ?? null,
+      background: pick("background") ?? prevAppearance.background ?? "cream",
+      primaryEmotion: analysis.primaryEmotion,
+      tags,
+    };
 
     await supabase.from("monsters").update({
       mood_score: Math.round(newMood), negative_energy: Math.round(newNeg), positive_energy: Math.round(newPos),
-      appearance, image_url: imageUrl, updated_at: new Date().toISOString(),
+      appearance, updated_at: new Date().toISOString(),
     }).eq("id", data.monsterId);
 
     // Save accessory
@@ -118,7 +128,7 @@ export const submitEmotion = createServerFn({ method: "POST" })
       }
     }
 
-    return { reply: analysis.reply, primaryEmotion: analysis.primaryEmotion, imageUrl, moodScore: Math.round(newMood), negativeEnergy: Math.round(newNeg), positiveEnergy: Math.round(newPos), safetyLevel: analysis.safetyLevel };
+    return { reply: analysis.reply, primaryEmotion: analysis.primaryEmotion, appearance, moodScore: Math.round(newMood), negativeEnergy: Math.round(newNeg), positiveEnergy: Math.round(newPos), safetyLevel: analysis.safetyLevel };
   });
 
 export const completeUserTask = createServerFn({ method: "POST" })

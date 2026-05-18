@@ -16,6 +16,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import moomoImg from "@/assets/moomo-default.png";
+import { MonsterSprite } from "@/components/MonsterSprite";
 
 export const Route = createFileRoute("/_authenticated/community")({ component: CommunityPage });
 
@@ -253,11 +254,7 @@ function CommunityPage() {
         {monster ? (
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="flex items-center gap-3 sm:w-44 sm:flex-col sm:items-start">
-              <img
-                src={monster.image_url || moomoImg}
-                alt={monster.name}
-                className="h-20 w-20 rounded-2xl bg-cream object-contain p-1"
-              />
+              <MonsterSprite appearance={monster.appearance as any} size={80} animate={false} className="rounded-2xl" />
               <div>
                 <p className="font-display text-lg text-cocoa">{monster.name}</p>
                 <p className="text-xs text-muted-foreground">
