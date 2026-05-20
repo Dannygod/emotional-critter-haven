@@ -58,7 +58,6 @@ export type Database = {
       community_posts: {
         Row: {
           anonymous_name: string
-          appearance: Json | null
           caption: string | null
           comment_count: number
           created_at: string
@@ -74,7 +73,6 @@ export type Database = {
         }
         Insert: {
           anonymous_name: string
-          appearance?: Json | null
           caption?: string | null
           comment_count?: number
           created_at?: string
@@ -90,7 +88,6 @@ export type Database = {
         }
         Update: {
           anonymous_name?: string
-          appearance?: Json | null
           caption?: string | null
           comment_count?: number
           created_at?: string
@@ -116,7 +113,6 @@ export type Database = {
       }
       diaries: {
         Row: {
-          appearance: Json | null
           created_at: string
           emotion_summary: Json
           end_date: string
@@ -128,7 +124,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          appearance?: Json | null
           created_at?: string
           emotion_summary?: Json
           end_date: string
@@ -140,7 +135,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          appearance?: Json | null
           created_at?: string
           emotion_summary?: Json
           end_date?: string
