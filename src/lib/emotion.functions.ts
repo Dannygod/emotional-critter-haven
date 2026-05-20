@@ -69,12 +69,16 @@ export const submitEmotion = createServerFn({ method: "POST" })
     const newMood = Math.max(-100, Math.min(100, isComfort ? monster.mood_score + 10 : monster.mood_score - intensity * 0.1));
 
     // === Layer composition: query sprite_parts by emotion tags, random pick per layer ===
-    const tags = [analysis.primaryEmotion, ...(analysis.concreteKeywords || []).map((k: any) => k.text)].filter(Boolean);
+    const tags = [
+      analysis.primaryEmotion,
+      ...(analysis.concreteKeywords || []).map((k: any) => k.text),
+    ].filter(Boolean);
+    const uniqueTags = [...new Set(tags)];
     const { data: candidates } = await supabase
       .from("sprite_parts")
       .select("layer,key,emotion_tags,rarity")
       .in("layer", ["eyes", "mouth", "head", "hand", "background"])
-      .overlaps("emotion_tags", [analysis.primaryEmotion]);
+      .overlaps("emotion_tags", uniqueTags);
 
     const pick = (layer: string) => {
       const pool = (candidates || []).filter((c) => c.layer === layer);
@@ -85,7 +89,7 @@ export const submitEmotion = createServerFn({ method: "POST" })
     };
 
     const prevAppearance = (monster.appearance as any) || {};
-    const bodyKey = prevAppearance.body || EMOTION_BODY[analysis.primaryEmotion] || "cream";
+    const bodyKey = EMOTION_BODY[analysis.primaryEmotion] || prevAppearance.body || "cream";
     const appearance = {
       ...prevAppearance,
       body: bodyKey,
@@ -95,7 +99,7 @@ export const submitEmotion = createServerFn({ method: "POST" })
       hand: pick("hand") ?? prevAppearance.hand ?? null,
       background: pick("background") ?? prevAppearance.background ?? "cream",
       primaryEmotion: analysis.primaryEmotion,
-      tags,
+      tags: uniqueTags,
     };
 
     await supabase.from("monsters").update({
