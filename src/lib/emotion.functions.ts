@@ -174,10 +174,15 @@ export const submitEmotion = createServerFn({ method: "POST" })
       tags: uniqueTags,
     };
 
-    await supabase.from("monsters").update({
+    const { error: updateError } = await supabase.from("monsters").update({
       mood_score: Math.round(newMood), negative_energy: Math.round(newNeg), positive_energy: Math.round(newPos),
       appearance, updated_at: new Date().toISOString(),
     }).eq("id", data.monsterId);
+
+    if (updateError) {
+      console.error("PostgreSQL update error on monsters table:", updateError);
+      throw new Error(`更新怪獸失敗: ${updateError.message}`);
+    }
 
     // Save accessory
     if (!isComfort && analysis.suggestedAccessory?.name) {

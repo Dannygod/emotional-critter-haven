@@ -48,7 +48,6 @@ function HomePage() {
         };
       });
 
-      qc.invalidateQueries({ queryKey: ["monster"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       if (r.safetyLevel !== "none") toast.warning("如果你覺得難以承受，請聯繫信任的人或撥打 1925");
     },
