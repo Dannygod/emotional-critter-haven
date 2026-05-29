@@ -40,28 +40,13 @@ function GalleryPage() {
     },
   });
 
-  const { data: current } = useQuery({
-    queryKey: ["monster", user?.id],
+  const { data: allMonsters = [] } = useQuery({
+    queryKey: ["all-monsters-appearances", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("monsters")
         .select("appearance")
-        .eq("user_id", user!.id)
-        .eq("status", "active")
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: diaries = [] } = useQuery({
-    queryKey: ["diary-appearances", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("diaries")
-        .select("appearance, monster_snapshot")
         .eq("user_id", user!.id);
       if (error) throw error;
       return data || [];
@@ -78,14 +63,12 @@ function GalleryPage() {
       });
     };
 
-    collect(current?.appearance);
-    diaries.forEach((diary) => {
-      collect(diary.appearance);
-      collect((diary.monster_snapshot as { appearance?: unknown } | null)?.appearance);
+    allMonsters.forEach((m) => {
+      collect(m.appearance);
     });
 
     return unlocked;
-  }, [current?.appearance, diaries]);
+  }, [allMonsters]);
 
   const unlockedParts = useMemo(
     () => parts.filter((part) => unlockedKeys.has(`${part.layer}:${part.key}`)),

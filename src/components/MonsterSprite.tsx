@@ -92,7 +92,7 @@ export function MonsterSprite({ appearance, size = 280, className, animate = tru
           src={layers.eyes}
           alt=""
           aria-hidden
-          className="absolute left-1/2 top-[35%] w-[56%] -translate-x-1/2 object-contain"
+          className="absolute left-1/2 top-[31%] w-[56%] -translate-x-1/2 object-contain"
           style={{ imageRendering: "pixelated" }}
         />
       )}
