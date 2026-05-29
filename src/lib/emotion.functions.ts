@@ -24,7 +24,12 @@ const ANALYSIS_SCHEMA = {
 } as const;
 
 const SYSTEM = `你是「Moomo 沐哞」的情緒分析師。使用者會輸入一段碎碎念或抱怨。請用繁體中文，溫柔接住情緒，不說教不診斷。
-分析主要情緒、強度(0-100)、抽取具象元素(學校、老師、雨等)並建議一個怪獸配件(head/face/body)。
+分析主要情緒、強度(0-100)、建議一個怪獸配件(head/face/body)，以及抽取具象關鍵字 (concreteKeywords)。
+
+重要：在抽取具象關鍵字 (concreteKeywords) 的 text 屬性時，請優先比對並使用以下支援的「特定關鍵字標籤」；如果使用者的文字包含或意圖類似以下詞彙，請「精準且完全一致地使用」下列標籤：
+[雨, 哭, 生氣, 緊張, 開心, 害羞, 平靜, 煩, 吵架, 累, 睡眠, 害怕, 難過, 放鬆, 被愛, 慶祝, 受傷, 孤單, 抱抱, 休息, 壓力, 夜晚, 睡不著]
+只有在完全沒有類似詞彙時，才自行提取其他具體名詞。
+
 回覆要短(2-3句)、像在拍拍對方的肩膀。若偵測自傷/傷人/危急，把 safetyLevel 設為對應值並在 reply 提供求助建議。`;
 
 export const submitEmotion = createServerFn({ method: "POST" })
@@ -69,9 +74,27 @@ export const submitEmotion = createServerFn({ method: "POST" })
     const newMood = Math.max(-100, Math.min(100, isComfort ? monster.mood_score + 10 : monster.mood_score - intensity * 0.1));
 
     // === Layer composition: query sprite_parts by emotion tags, random pick per layer ===
+    const SUPPORTED_CHINESE_TAGS = [
+      "雨", "哭", "生氣", "緊張", "開心", "害羞", "平靜", "煩", "吵架", "累", "睡眠",
+      "害怕", "難過", "放鬆", "被愛", "慶祝", "受傷", "孤單", "抱抱", "休息", "壓力", "夜晚", "睡不著"
+    ];
+
+    const rawKeywords = (analysis.concreteKeywords || []).map((k: any) => k.text).filter(Boolean);
+    const normalizedKeywords = rawKeywords.map((kw: string) => {
+      const trimmed = kw.trim();
+      if (SUPPORTED_CHINESE_TAGS.includes(trimmed)) return trimmed;
+      // 子字串模糊匹配 (例如 "下雨" -> "雨", "很累" -> "累")
+      for (const tag of SUPPORTED_CHINESE_TAGS) {
+        if (trimmed.includes(tag) || tag.includes(trimmed)) {
+          return tag;
+        }
+      }
+      return trimmed;
+    });
+
     const tags = [
       analysis.primaryEmotion,
-      ...(analysis.concreteKeywords || []).map((k: any) => k.text),
+      ...normalizedKeywords,
     ].filter(Boolean);
     const uniqueTags = [...new Set(tags)];
     const { data: candidates } = await supabase
