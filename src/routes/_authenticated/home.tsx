@@ -35,6 +35,19 @@ function HomePage() {
     onSuccess: (r) => {
       setReply(r.reply);
       setText("");
+      
+      // 立即且同步地更新 React Query 快取，提供極致流暢的即時更新體驗
+      qc.setQueryData(["monster", user?.id], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          appearance: r.appearance,
+          mood_score: r.moodScore,
+          negative_energy: r.negativeEnergy,
+          positive_energy: r.positiveEnergy,
+        };
+      });
+
       qc.invalidateQueries({ queryKey: ["monster"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       if (r.safetyLevel !== "none") toast.warning("如果你覺得難以承受，請聯繫信任的人或撥打 1925");

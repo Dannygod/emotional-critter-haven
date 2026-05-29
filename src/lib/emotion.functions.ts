@@ -103,12 +103,61 @@ export const submitEmotion = createServerFn({ method: "POST" })
       .in("layer", ["eyes", "mouth", "head", "hand", "background"])
       .overlaps("emotion_tags", uniqueTags);
 
+    const FALLBACK_PARTS: Record<string, Record<string, string[]>> = {
+      eyes: {
+        normal: ["neutral", "comfort"],
+        angry: ["anger", "frustration", "生氣", "吵架"],
+        sleepy: ["fatigue", "neutral", "累", "睡眠"],
+        nervous: ["anxiety", "embarrassment", "緊張", "害怕"],
+        teary: ["sadness", "loneliness", "哭", "難過"],
+        sparkle: ["comfort", "neutral", "開心"],
+      },
+      mouth: {
+        smile: ["comfort", "neutral", "開心", "平靜"],
+        frown: ["sadness", "anxiety", "fatigue", "frustration", "loneliness", "embarrassment", "anger"],
+      },
+      head: {
+        raincloud: ["sadness", "loneliness", "雨", "哭", "難過"],
+        flame: ["anger", "frustration", "生氣", "火大"],
+        halo: ["comfort", "neutral", "放鬆"],
+        flowercrown: ["comfort", "loneliness", "開心", "被愛"],
+        partyhat: ["comfort", "neutral", "開心", "慶祝"],
+        bandage: ["sadness", "fatigue", "frustration", "受傷", "累"],
+      },
+      hand: {
+        plush: ["sadness", "loneliness", "comfort", "孤單", "抱抱"],
+        tissue: ["sadness", "哭", "難過"],
+        teacup: ["fatigue", "comfort", "累", "休息"],
+        hammer: ["anger", "frustration", "生氣", "壓力"],
+        balloon: ["comfort", "embarrassment", "開心", "害羞"],
+      },
+      background: {
+        cream: ["neutral", "fatigue"],
+        rain: ["sadness", "loneliness", "雨", "難過"],
+        stars: ["anxiety", "loneliness", "夜晚", "睡不著"],
+        hearts: ["comfort", "embarrassment", "被愛", "害羞"],
+        sparks: ["anger", "frustration", "生氣", "煩"],
+      }
+    };
+
     const pick = (layer: string) => {
       const pool = (candidates || []).filter((c) => c.layer === layer);
-      if (!pool.length) return null;
-      // weight: common 3, rare 1, epic for comfort only already filtered by tag
-      const weighted = pool.flatMap((p) => Array(p.rarity === "common" ? 3 : p.rarity === "rare" ? 1 : 1).fill(p.key));
-      return weighted[Math.floor(Math.random() * weighted.length)] as string;
+      if (pool.length > 0) {
+        // weight: common 3, rare 1, epic for comfort only already filtered by tag
+        const weighted = pool.flatMap((p) => Array(p.rarity === "common" ? 3 : p.rarity === "rare" ? 1 : 1).fill(p.key));
+        return weighted[Math.floor(Math.random() * weighted.length)] as string;
+      }
+      
+      // 靜態兜底 (Static Fallback) 以防資料庫未 Seed 資料
+      const layerFallback = FALLBACK_PARTS[layer];
+      if (!layerFallback) return null;
+      const matchedKeys: string[] = [];
+      for (const [key, tagsList] of Object.entries(layerFallback)) {
+        if (tagsList.some((t) => uniqueTags.includes(t))) {
+          matchedKeys.push(key);
+        }
+      }
+      return matchedKeys.length > 0 ? matchedKeys[Math.floor(Math.random() * matchedKeys.length)] : null;
     };
 
     const prevAppearance = (monster.appearance as any) || {};
