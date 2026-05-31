@@ -41,7 +41,9 @@ export async function analyzeEmotion(text: string): Promise<AnalysisResult> {
   if (!aiRes.ok) {
     if (aiRes.status === 429) throw new Error("AI 請求太頻繁了，等一下再試試");
     if (aiRes.status === 402) throw new Error("Lovable AI 額度用完了，請到設定加值");
-    throw new Error("AI 分析失敗");
+    const errBody = await aiRes.text().catch(() => "");
+    console.error("AI gateway error", aiRes.status, errBody);
+    throw new Error(`AI 分析失敗 (${aiRes.status}): ${errBody.slice(0, 200)}`);
   }
 
   const aiJson = await aiRes.json();
