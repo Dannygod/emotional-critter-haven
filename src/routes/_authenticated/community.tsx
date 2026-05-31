@@ -4,12 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Heart,
   MessageCircle,
-  MoreHorizontal,
   Pencil,
   Send,
   Sparkles,
   Trash2,
   X,
+  Flag,
+  ShieldAlert,
+  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -27,6 +29,13 @@ type PostWithComments = PostRow & { post_comments?: CommentRow[] };
 const MAX_CAPTION = 200;
 const MAX_COMMENT = 160;
 
+const REPORT_REASONS = [
+  { value: "personal_info", label: "包含個人資訊" },
+  { value: "offensive", label: "攻擊性或霸凌言論" },
+  { value: "dangerous", label: "危險或自傷內容" },
+  { value: "other", label: "其他" },
+] as const;
+
 function CommunityPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -35,6 +44,17 @@ function CommunityPage() {
   const [editingCaption, setEditingCaption] = useState("");
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+
+  // Share confirmation dialog state
+  const [showShareConfirm, setShowShareConfirm] = useState(false);
+
+  // Report dialog state
+  const [reportTarget, setReportTarget] = useState<{
+    type: "post" | "comment";
+    id: string;
+  } | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetail, setReportDetail] = useState("");
 
   const { data: posts, isLoading: postsLoading } = useQuery({
     queryKey: ["posts"],
@@ -113,6 +133,7 @@ function CommunityPage() {
     },
     onSuccess: () => {
       setCaption("");
+      setShowShareConfirm(false);
       qc.invalidateQueries({ queryKey: ["posts"] });
       toast.success("已匿名分享！");
     },
@@ -211,6 +232,33 @@ function CommunityPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const submitReport = useMutation({
+    mutationFn: async () => {
+      if (!reportTarget || !reportReason) throw new Error("請選擇檢舉原因");
+      const payload: Record<string, unknown> = {
+        reporter_id: user!.id,
+        reason: reportReason,
+        detail: reportDetail.trim() || null,
+      };
+      if (reportTarget.type === "post") payload.post_id = reportTarget.id;
+      else payload.comment_id = reportTarget.id;
+
+      // post_reports table added via migration — cast to bypass generated types
+      const { error } = await (supabase.from as any)("post_reports").insert(payload);
+      if (error) {
+        if (error.code === "23505") throw new Error("你已經檢舉過了");
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("已收到你的檢舉，我們會盡快處理");
+      setReportTarget(null);
+      setReportReason("");
+      setReportDetail("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const communityStats = useMemo(() => {
     const safePosts = posts || [];
     return {
@@ -230,6 +278,10 @@ function CommunityPage() {
 
   const confirmDeletePost = (postId: string) => {
     if (window.confirm("確定要刪除這篇分享嗎？留言與愛心也會一起移除。")) deletePost.mutate(postId);
+  };
+
+  const handleShareClick = () => {
+    setShowShareConfirm(true);
   };
 
   return (
@@ -277,7 +329,7 @@ function CommunityPage() {
                   {caption.length}/{MAX_CAPTION} · 不需要完美，真實一點就很好
                 </p>
                 <button
-                  onClick={() => share.mutate()}
+                  onClick={handleShareClick}
                   disabled={share.isPending || !profile}
                   className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-medium text-accent-foreground shadow-pillow transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -290,6 +342,112 @@ function CommunityPage() {
           <p className="text-sm text-muted-foreground">準備好一隻小哞後，就能來這裡匿名分享。</p>
         )}
       </section>
+
+      {/* ── 分享前提醒 Dialog ─────────────── */}
+      {showShareConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-card p-6 shadow-pillow">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-accent" />
+              <h3 className="font-display text-lg text-cocoa">分享前請確認</h3>
+            </div>
+            <ul className="mt-4 space-y-2 text-sm leading-6 text-muted-foreground">
+              <li className="flex gap-2">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span>請確認你的內容<strong className="text-cocoa">不包含個人資訊</strong>（真實姓名、學校、電話等）</span>
+              </li>
+              <li className="flex gap-2">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span>這裡是<strong className="text-cocoa">溫柔的空間</strong>，請避免攻擊性或傷害性言論</span>
+              </li>
+              <li className="flex gap-2">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span>分享的內容將以<strong className="text-cocoa">匿名暱稱</strong>呈現</span>
+              </li>
+            </ul>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setShowShareConfirm(false)}
+                className="rounded-full border border-border bg-background px-4 py-2 text-sm text-cocoa hover:bg-cream-deep"
+              >
+                返回修改
+              </button>
+              <button
+                onClick={() => share.mutate()}
+                disabled={share.isPending}
+                className="rounded-full bg-accent px-5 py-2 text-sm font-medium text-accent-foreground shadow-pillow disabled:opacity-50"
+              >
+                {share.isPending ? "分享中…" : "確認分享"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 檢舉 Dialog ─────────────────── */}
+      {reportTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-card p-6 shadow-pillow">
+            <div className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-destructive" />
+              <h3 className="font-display text-lg text-cocoa">
+                檢舉{reportTarget.type === "post" ? "貼文" : "留言"}
+              </h3>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              我們會盡快審核你的檢舉，不符合社群精神的內容將被隱藏。
+            </p>
+            <div className="mt-4 space-y-2">
+              {REPORT_REASONS.map((r) => (
+                <label
+                  key={r.value}
+                  className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition ${
+                    reportReason === r.value
+                      ? "border-accent bg-accent/10 text-cocoa"
+                      : "border-border bg-background text-muted-foreground hover:bg-cream-deep"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="report-reason"
+                    value={r.value}
+                    checked={reportReason === r.value}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="sr-only"
+                  />
+                  <div className={`h-4 w-4 rounded-full border-2 ${
+                    reportReason === r.value ? "border-accent bg-accent" : "border-border"
+                  }`} />
+                  {r.label}
+                </label>
+              ))}
+            </div>
+            <textarea
+              value={reportDetail}
+              onChange={(e) => setReportDetail(e.target.value)}
+              maxLength={300}
+              rows={2}
+              placeholder="補充說明（選填）"
+              className="mt-3 w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => { setReportTarget(null); setReportReason(""); setReportDetail(""); }}
+                className="rounded-full border border-border bg-background px-4 py-2 text-sm text-cocoa hover:bg-cream-deep"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => submitReport.mutate()}
+                disabled={submitReport.isPending || !reportReason}
+                className="rounded-full bg-destructive px-5 py-2 text-sm font-medium text-white shadow-pillow disabled:opacity-50"
+              >
+                {submitReport.isPending ? "送出中…" : "送出檢舉"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {postsLoading && <p className="text-sm text-muted-foreground">載入交流區中…</p>}
@@ -320,24 +478,36 @@ function CommunityPage() {
                     {post.edited_at ? " · 已編輯" : ""}
                   </p>
                 </div>
-                {isOwner && (
-                  <div className="flex shrink-0 items-center gap-1">
+                <div className="flex shrink-0 items-center gap-1">
+                  {isOwner && (
+                    <>
+                      <button
+                        onClick={() => startEditing(post)}
+                        aria-label="編輯貼文"
+                        className="rounded-full p-2 text-muted-foreground transition hover:bg-cream-deep hover:text-cocoa"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => confirmDeletePost(post.id)}
+                        aria-label="刪除貼文"
+                        className="rounded-full p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                  {!isOwner && (
                     <button
-                      onClick={() => startEditing(post)}
-                      aria-label="編輯貼文"
-                      className="rounded-full p-2 text-muted-foreground transition hover:bg-cream-deep hover:text-cocoa"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => confirmDeletePost(post.id)}
-                      aria-label="刪除貼文"
+                      onClick={() => setReportTarget({ type: "post", id: post.id })}
+                      aria-label="檢舉貼文"
                       className="rounded-full p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                      title="檢舉"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Flag className="h-4 w-4" />
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               <div className="mt-3 flex justify-center">
@@ -415,7 +585,6 @@ function CommunityPage() {
                     {post.comment_count ?? comments.length}
                   </button>
                 </div>
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </div>
 
               {commentsOpen && (
@@ -432,15 +601,26 @@ function CommunityPage() {
                             {formatTime(comment.created_at)}
                           </p>
                         </div>
-                        {comment.user_id === user?.id && (
-                          <button
-                            onClick={() => deleteComment.mutate(comment.id)}
-                            aria-label="刪除留言"
-                            className="rounded-full p-1.5 text-muted-foreground hover:bg-background hover:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        <div className="flex shrink-0 items-center gap-1">
+                          {comment.user_id === user?.id ? (
+                            <button
+                              onClick={() => deleteComment.mutate(comment.id)}
+                              aria-label="刪除留言"
+                              className="rounded-full p-1.5 text-muted-foreground hover:bg-background hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setReportTarget({ type: "comment", id: comment.id })}
+                              aria-label="檢舉留言"
+                              className="rounded-full p-1.5 text-muted-foreground hover:bg-background hover:text-destructive"
+                              title="檢舉"
+                            >
+                              <Flag className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import { Send, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { submitEmotion } from "@/lib/emotion.functions";
+import { submitEmotion } from "@/lib/emotion";
 import { MonsterSprite } from "@/components/MonsterSprite";
+import { CrisisCard } from "@/components/CrisisCard";
+import type { SafetyLevel } from "@/lib/emotion/safety";
 
 export const Route = createFileRoute("/_authenticated/home")({ component: HomePage });
 
@@ -17,6 +19,7 @@ function HomePage() {
   const submit = useServerFn(submitEmotion);
   const [text, setText] = useState("");
   const [reply, setReply] = useState<string | null>(null);
+  const [safetyLevel, setSafetyLevel] = useState<SafetyLevel>("none");
 
   const { data: monster } = useQuery({
     queryKey: ["monster", user?.id],
@@ -35,7 +38,8 @@ function HomePage() {
     onSuccess: (r) => {
       setReply(r.reply);
       setText("");
-      
+      setSafetyLevel(r.safetyLevel as SafetyLevel);
+
       // 立即且同步地更新 React Query 快取，提供極致流暢的即時更新體驗
       qc.setQueryData(["monster", user?.id], (old: any) => {
         if (!old) return old;
@@ -49,7 +53,6 @@ function HomePage() {
       });
 
       qc.invalidateQueries({ queryKey: ["tasks"] });
-      if (r.safetyLevel !== "none") toast.warning("如果你覺得難以承受，請聯繫信任的人或撥打 1925");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -86,6 +89,11 @@ function HomePage() {
             <p className="text-sm leading-relaxed text-cocoa">{reply}</p>
           </div>
         </div>
+      )}
+
+      {/* 危機求助固定卡片 — 取代原本的 toast.warning */}
+      {safetyLevel !== "none" && (
+        <CrisisCard onDismiss={() => setSafetyLevel("none")} />
       )}
 
       <form onSubmit={(e) => { e.preventDefault(); if (text.trim()) mut.mutate(text); }} className="rounded-3xl bg-card p-4 shadow-pillow">
